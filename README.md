@@ -2,89 +2,71 @@
 
 # Return Fire Remastered
 
-Play your original Windows edition of *Return Fire* on Windows 11 with its 256-colour battlefield, keyboard controls, sound effects and vehicle themes. This unofficial kit brings the original executable to a modern display. You supply the game.
+Play your original English Windows edition of *Return Fire* on Windows 11. The kit preserves the game's palette, keyboard controls and sharp pixel edges. The English ISO also supports an experimental wider battlefield and HD cinematics built from your own disc files.
 
-## First launch
+## Install and play
 
-1. Download the repository ZIP from GitHub (**Code → Download ZIP**) and extract it into a writable folder.
-2. Prepare one of the English Windows PC editions below.
-3. Double-click **Play.cmd** and select the folder containing **RFIRE.BIN**. The first setup imports your files into **PrivateGame** and downloads a checksum-verified copy of cnc-ddraw. Later launches work offline. Choose a display mode and select **Play**. The original 4:3 window is preselected. If the ISO HD films are installed, the picker also offers HD playback (Python dependencies below).
+1. Download [the v0.2.0 Windows kit](https://github.com/twosharprocks/Return-Fire-Remastered/releases/download/v0.2.0/Return-Fire-Remastered-v0.2.0-Windows.zip) and extract the entire folder somewhere writable. If Windows blocks a ZIP you trust, open its Properties and select **Unblock** before extracting.
+2. Double-click **Play.cmd**. Select the folder containing **RFIRE.BIN**. For the ISO, mount or extract your disc image and select its root. For the RIP, extract the archive and select the inner game folder.
+3. Choose a display mode and select **Play**. **Original 4:3 - windowed** is preselected. You can choose again the next time you launch.
 
-| Your edition | Folder to select | Music |
+First setup copies your files into **PrivateGame** and downloads a checksum-verified cnc-ddraw display wrapper. Later launches work offline. Use a separate extracted kit folder for each edition. Python and FFmpeg are optional and are only needed for the HD film features.
+
+| Display picker and media | English ISO | English RIP |
 | --- | --- | --- |
-| English ISO | Mount the extracted disc image in Explorer and select its drive, or select the root of the extracted image. It should contain Langs and Sound. | The tested disc includes the full score. The tank plays *Mars, the Bringer of War* and the helicopter plays *Ride of the Valkyries*. |
-| English RIP | Extract the archive and select the inner returnfire folder. | The tested RIP has a 20-byte score placeholder. Engine and weapon effects use separate files. |
+| Original 4:3, windowed | Available | Available |
+| Experimental 16:9, borderless fullscreen | Available for the verified English ISO executable | Disabled in the picker |
+| Engine and weapon effects | Available | Available |
+| Vehicle music | Included on the tested disc | The tested RIP has a 20-byte score placeholder |
+| Build and play HD films | Available from your own ISO files | Requires ISO media and installation |
 
-Use a separate kit folder for each edition. Once installed, the launcher reuses its local game data. If Windows blocks a downloaded copy you trust, open the ZIP's Properties, select **Unblock** if available and extract again.
+The 4:3 option opens a movable window that fits the desktop and retains the original 640×480 game surface. The 16:9 option fills the primary display, keeps the game menu accessible, and expands the battlefield from 320×152 to 428×152 logical pixels. The vehicles keep their proportions and the single-player HUD stays centred. Sharp is the default in both modes.
 
-## Picture, sound and films
+## Build the HD films from your ISO
 
-**Original 4:3 � windowed** opens a framed, movable window that fits the available desktop. It retains the original 640�480 game surface and works with both editions. **Experimental 16:9 � borderless fullscreen** fills the primary monitor and expands the battlefield. It requires the verified English ISO executable. The game's menu remains accessible in both modes.
+1. Complete first setup with your English ISO. Install Python 3 and FFmpeg with the libx264 encoder. Open **Command Prompt** in the extracted kit folder and check that both tools are on PATH.
+2. Install the optional playback dependencies into the same Python environment.
 
-Choose the mode each time you start the game, or use a direct launch command:
+       python --version
+       ffmpeg -version
+       python -m pip install opencv-python psutil
 
-    Play.cmd -DisplayMode Windowed4x3
-    Play.cmd -DisplayMode Fullscreen16x9 -HDCinematics
+3. Build the films using the files already imported from your ISO.
 
-Run these examples in a command prompt inside the kit folder.
+       Play.cmd -BuildCinematics
+
+   To read directly from a mounted disc or an extracted ISO folder, pass its root. For example, use the following command for a disc mounted on D.
+
+       Play.cmd -BuildCinematics -Source D:\
+
+4. Run **Play.cmd**, choose either display mode, leave **Play installed HD films** checked, and select **Play**.
+
+The builder checks five original STM files and writes **rf.mp4** (opening) and **win.mp4**, **win1.mp4**, **win2.mp4**, **win3.mp4** (victories) to **HD-Cinematics** beside Play.cmd. It preserves the original 15 fps and stereo audio and scales a 16:9 crop to 1920×1080. Rename an existing output folder before rebuilding. Keep the generated films with your private installation.
+
+The two animated studio openings keep their centred 4:3 framing. The HD title uses the corrected fire palette. Victory films play automatically with the original single-player flag emblem. The game remains responsible for timing, skipping and sound.
+
+## Direct launch and other options
+
+Run these commands in the kit folder.
 
 | Command | Effect |
 | --- | --- |
-| `Play.cmd -MovieFix` | Repairs the horizontal band across ISO films. Both the opening and mission-completion film passed live playback checks. The launcher checks the executable fingerprint and creates a separate local copy. Launch normally to restore standard playback. |
-| `Play.cmd -Filter Sharp` | Uses nearest-neighbour scaling for crisp pixel edges. |
-| `Play.cmd -Filter xBR` | Uses an optional OpenGL pixel-art shader. Tested on The Cakewalk in the Windows 11 VM. |
-| `Play.cmd -ProfileName 720p` | Caps the original window at 720 pixels high. |
-| `Play.cmd -ProfileName Original` | Caps the original window at 640�480. |
-| `Play.cmd -WrapperZip "C:\Downloads\cnc-ddraw.zip"` | Uses a local copy of the pinned wrapper for an offline first setup. |
+| `Play.cmd -DisplayMode Windowed4x3` | Launch the original window directly. |
+| `Play.cmd -DisplayMode Fullscreen16x9 -HDCinematics` | Launch experimental fullscreen with your installed HD films. Omit `-HDCinematics` for native films. |
+| `Play.cmd -WidescreenTrial` | Existing shortcut for experimental fullscreen. |
+| `Play.cmd -MovieFix` | Repair the horizontal band in native ISO films. The launcher creates a fingerprint-checked local executable. |
+| `Play.cmd -Filter xBR` | Try the optional OpenGL pixel-art shader. Sharp and Smooth are also available. |
+| `Play.cmd -ProfileName 720p` | Cap the original window at 720 pixels high. Use `Original` for 640×480. |
+| `Play.cmd -WrapperZip "C:\Downloads\cnc-ddraw.zip"` | Install offline using the unmodified [cnc-ddraw 7.1.0.0 release archive](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0). |
 
-Sharp is the default and preserves the original pixel edges. The optional Smooth setting requests Direct3D bicubic filtering. Its visible effect on the game's 8-bit frames depends on wrapper support. For offline installation, obtain the unmodified archive from the [cnc-ddraw 7.1.0.0 release](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0).
+## Tested on Windows 11
 
-## Full mission tests in v0.1.0
+Both editions launched through the display picker in a 4:3 window. The ISO also launched in borderless fullscreen on a 1920×1080 desktop. On The Cakewalk, the wider view showed additional terrain on both sides and the HUD remained centred after switching to the jeep. Returning the flag automatically played the HD victory film. The visible frame matched the local HD source, and the player confirmed the restored emblem, clean playback and correct framing.
 
-On Windows 11, a player completed one mission in each English edition using fresh installations from the downloaded v0.1.0 Windows ZIP.
+Full missions tested with the v0.1.0 kit confirmed engine and weapon effects in both editions. The ISO played *Mars, the Bringer of War* in the tank and *Ride of the Valkyries* in the helicopter. Further tests include the other three victory films on native Windows, additional vehicles, split-screen and Linux under Wine.
 
-- **RIP edition (`Play.cmd`).** The engine was audible while driving and individual shots were audible when firing. The player won the mission. The tested RIP contains a 20-byte music placeholder.
-- **ISO edition (`Play.cmd -MovieFix`).** Engine and weapon sounds were audible alongside the score. The tank played *Mars, the Bringer of War*, and switching to the helicopter changed the music to *Ride of the Valkyries*. Winning the mission automatically started the original completion film. It played to the end without the horizontal black band.
+## Sharing and credits
 
-## Moving or sharing the kit
+Share the Windows release ZIP. Your installed **PrivateGame** folder and generated **HD-Cinematics** contain material from your copy of the game. To move a personal installation, close the game and move the whole extracted folder. Controls and progress live in the Windows user registry and are shared by installations under that account.
 
-Close the game before moving your personal installation. Move the whole extracted folder together. The launcher refreshes the game path at startup and uses a temporary drive mapping while playing. Controls and progress live in the Windows user registry and are shared by installations under that account. To share the kit, send a clean repository ZIP. Your installed folder contains your personal copy of the game.
-
-## v0.2.0 development options
-
-### Build the 16:9 films
-
-Install Python 3 and FFmpeg with the libx264 encoder, and make both commands available on PATH. Mount or extract your English Windows ISO. In a command prompt inside the kit, run:
-
-    Play.cmd -BuildCinematics -Source "D:\"
-
-Replace D:\ with the mounted disc or extracted folder. You can omit the source to use your installed films or open the folder picker. The converter checks the five original STM fingerprints and writes rf.mp4 (opening) and win.mp4, win1.mp4, win2.mp4 and win3.mp4 (completion films) to **HD-Cinematics** beside Play.cmd. Each file plays in a regular MP4 player. To rebuild, rename the existing output folder first.
-
-The conversion keeps the source frame rate of 15 fps and stereo audio. It crops the 320×240 picture to 320×180 before scaling to 1920×1080. The opening uses the corrected fire palette and a centred crop. The victory films use the lower framing selected for the parade. Keep these player-generated movies in your personal installation.
-
-For in-game HD playback, install the optional display dependencies in the same Python environment and launch the ISO edition:
-
-    python -m pip install opencv-python psutil
-    Play.cmd -HDCinematics
-
-The game controls skipping and audio. The HD picture follows the original film frame while the game has focus. The HD player reads the two animated studio idents from the installed ISO files and centres their full 4:3 frames. Existing five-film builds work without another conversion.
-
-### Try the wider battlefield
-
-    Play.cmd -WidescreenTrial
-
-This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. The launcher keeps a separate local widescreen executable so you can switch modes on the next launch. The existing -WidescreenTrial switch also selects borderless fullscreen. In a Windows 11 VirtualBox guest at 1920×1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. In a full Cakewalk mission in the Windows 11 guest, the HUD stayed centred through the switch to the jeep and the flag return. Split-screen remains untested.
-
-In an earlier VirtualBox run the game displayed the original victory film at the left of the widescreen picture even though the HD player logged frame presentations. The updated player uses a window owned by the game and centres the widescreen victory picture at the original film's display width. The opening uses the full widescreen canvas.
-
-On the physical Windows 11 PC, The Cakewalk ran at 1920�1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0�176, and frames captured from the visible game matched the player-built HD film. Its 1440�810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The player now draws each complete frame off screen, including the original brown single-player victory banner from the installed game, before presenting it to Windows. A native Cakewalk capture showed the emblem over the movie and the sampled film rows matched the HD source. The player confirmed the game and films appeared correctly without black lines or flicker. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
-
-## Where the remaster goes next
-
-- **More battlefield at 16:9.** Check the HUD with the remaining vehicles and in split-screen.
-- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Verify the remaining victory clips on the native Windows build.
-- **Graphics and platform testing.** Test installation, sound and input under Wine on Linux.
-
-## Credits and licensing
-
-The project MIT licence covers the launcher and its documentation. The bundled xBR shader carries its own author credit and MIT notice. The original game, music and cinematics belong to their respective rights holders and are supplied by the player. The display wrapper is distributed by its own maintainers. [Project licence](LICENSE) · [Shader notice](xbr-lv2-noblend.glsl) · [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw)
+The MIT licence covers the launcher and its documentation. The bundled xBR shader includes its own author credit and MIT notice. The original game, music and cinematics belong to their respective rights holders. The display wrapper is distributed by its maintainers. [Project licence](LICENSE) · [Shader notice](xbr-lv2-noblend.glsl) · [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw)
