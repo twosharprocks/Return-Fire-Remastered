@@ -19,7 +19,7 @@ Use a separate kit folder for each edition. Once installed, the launcher reuses 
 
 ## Picture, sound and films
 
-The default 1080p profile centres the original 4:3 frame on a borderless display. At 1920×1080 the battlefield occupies 1440×1080, preserving vehicle and HUD proportions. The original game still draws at 640×480. Live Windows 11 checks confirmed the repaired palette, engine sounds and gunfire. The English ISO reached the training depot. The tested RIP reached the title screen and its imported files matched the gameplay-tested installation.
+The default 1080p profile centres the original 4:3 frame on a borderless display. At 1920×1080 the battlefield occupies 1440×1080, preserving vehicle and HUD proportions. The original game still draws at 640×480. Live Windows 11 checks confirmed the repaired palette.
 
 Run these examples in a command prompt inside the kit folder.
 
@@ -33,6 +33,13 @@ Run these examples in a command prompt inside the kit folder.
 | `Play.cmd -WrapperZip "C:\Downloads\cnc-ddraw.zip"` | Uses a local copy of the pinned wrapper for an offline first setup. |
 
 The default Smooth option requests Direct3D bicubic filtering. Its visible effect on the game's 8-bit frames depends on wrapper support. For offline installation, obtain the unmodified archive from the [cnc-ddraw 7.1.0.0 release](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0).
+
+## Full mission tests in v0.1.0
+
+On Windows 11, a player completed one mission in each English edition using fresh installations from the downloaded v0.1.0 Windows ZIP.
+
+- **RIP edition (`Play.cmd`).** The engine was audible while driving and individual shots were audible when firing. The player won the mission. The tested RIP contains a 20-byte music placeholder.
+- **ISO edition (`Play.cmd -MovieFix`).** Engine and weapon sounds were audible alongside the score. The tank played *Mars, the Bringer of War*, and switching to the helicopter changed the music to *Ride of the Valkyries*. Winning the mission automatically started the original completion film. It played to the end without the horizontal black band.
 
 ## Moving or sharing the kit
 
