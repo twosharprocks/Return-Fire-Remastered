@@ -1,0 +1,11 @@
+PrivateGame/
+.setup-*/
+*.iso
+*.zip
+*.exe
+*.dll
+*.bin
+*.car
+*.wav
+*.avi
+*.mp4
