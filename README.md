@@ -27,12 +27,12 @@ Run these examples in a command prompt inside the kit folder.
 | --- | --- |
 | `Play.cmd -MovieFix` | Repairs the horizontal band across ISO films. Both the opening and mission-completion film passed live playback checks. The launcher checks the executable fingerprint and creates a separate local copy. Launch normally to restore standard playback. |
 | `Play.cmd -Filter Sharp` | Uses nearest-neighbour scaling for crisp pixel edges. |
-| `Play.cmd -Filter xBR` | Uses an optional OpenGL pixel-art shader. Reference frames have been compared. In-game driver compatibility still needs testing. |
+| `Play.cmd -Filter xBR` | Uses an optional OpenGL pixel-art shader. Tested on The Cakewalk in the Windows 11 VM. |
 | `Play.cmd -ProfileName 720p` | Selects the smaller HD profile. |
 | `Play.cmd -ProfileName Original` | Selects the original-size profile. |
 | `Play.cmd -WrapperZip "C:\Downloads\cnc-ddraw.zip"` | Uses a local copy of the pinned wrapper for an offline first setup. |
 
-The default Smooth option requests Direct3D bicubic filtering. Its visible effect on the game's 8-bit frames depends on wrapper support. For offline installation, obtain the unmodified archive from the [cnc-ddraw 7.1.0.0 release](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0).
+Sharp is the default and preserves the original pixel edges. The optional Smooth setting requests Direct3D bicubic filtering. Its visible effect on the game's 8-bit frames depends on wrapper support. For offline installation, obtain the unmodified archive from the [cnc-ddraw 7.1.0.0 release](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0).
 
 ## Full mission tests in v0.1.0
 
@@ -70,13 +70,15 @@ The game controls skipping and audio. The HD picture follows the original film f
 
 This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. In a Windows 11 VirtualBox guest at 1920×1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. In a full Cakewalk mission in the Windows 11 guest, the HUD stayed centred through the switch to the jeep and the flag return. Split-screen remains untested.
 
-The victory film started automatically on that run and appeared left of centre. The HD player log recorded Windows error 1455 before the first HD frame, so this run exercised native film playback. The player heard neither effects nor music and found the default Smooth filter blurry. To compare crisp pixel edges on the next run, use `Play.cmd -WidescreenTrial -HDCinematics -Filter Sharp`.
+In an earlier VirtualBox run the game displayed the original victory film at the left of the widescreen picture even though the HD player logged frame presentations. The updated player uses a window owned by the game and centres the widescreen victory picture at the original film's display width. The opening uses the full widescreen canvas.
+
+On the physical Windows 11 PC, The Cakewalk ran at 1920�1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0�176, and frames captured from the visible game matched the player-built HD film. Its 1440�810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
 
 ## Where the remaster goes next
 
 - **More battlefield at 16:9.** Check the HUD with the remaining vehicles and in split-screen.
-- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Retest the player-built HD victory film in the guest with the revised movie detector. Check the logged MP4 name, source dimensions, display position and presented frames.
-- **Graphics and platform testing.** Compare xBR with the default renderer in motion, then test installation, sound and input under Wine on Linux.
+- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Verify the remaining victory clips on the native Windows build.
+- **Graphics and platform testing.** Test installation, sound and input under Wine on Linux.
 
 ## Credits and licensing
 

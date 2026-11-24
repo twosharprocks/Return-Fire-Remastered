@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('1080p','720p','Original')] [string]$ProfileName = '1080p',
-    [ValidateSet('Smooth','Sharp','xBR')] [string]$Filter = 'Smooth',
+    [ValidateSet('Smooth','Sharp','xBR')] [string]$Filter = 'Sharp',
     [string]$Source,
     [string]$WrapperZip,
     [switch]$MovieFix,

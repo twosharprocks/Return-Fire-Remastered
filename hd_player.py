@@ -43,9 +43,18 @@ dc_for = api(u, "GetDC", ptr, ptr)
 draw = api(
     g, "StretchDIBits", c.c_int, ptr, *([c.c_int] * 8), ptr, ptr, w.UINT, w.DWORD
 )
+black_fill = api(g, "PatBlt", w.BOOL, ptr, c.c_int, c.c_int, c.c_int, c.c_int, w.DWORD)
 release = api(u, "ReleaseDC", c.c_int, ptr, ptr)
 position = api(
     u, "SetWindowPos", w.BOOL, ptr, ptr, c.c_int, c.c_int, c.c_int, c.c_int, w.UINT
+)
+set_owner = api(
+    u,
+    "SetWindowLongPtrW" if c.sizeof(ptr) == 8 else "SetWindowLongW",
+    ptr,
+    ptr,
+    c.c_int,
+    ptr,
 )
 foreground = api(u, "GetForegroundWindow", ptr)
 hidden = api(u, "ShowWindow", w.BOOL, ptr, c.c_int)
@@ -115,7 +124,7 @@ def play(pid, base, runtime):
         raise c.WinError()
     # The standard STATIC class supplies a non-interactive display surface.
     window = create(
-        0x080800A0,
+        0x08000080,  # WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW
         "STATIC",
         "Return Fire HD Cinematics",
         0x80000000,
@@ -130,7 +139,7 @@ def play(pid, base, runtime):
     )
     if not window:
         raise c.WinError()
-    u.SetLayeredWindowAttributes(window, 0, 255, 2)
+    game_window = None
     movies = runtime.parent / "HD-Cinematics"
     clips = {
         name: runtime / "Title" / (name + ".stm")
@@ -239,7 +248,14 @@ def play(pid, base, runtime):
                         width = min(rect.right, rect.bottom * 16 // 9)
                         height = width * 9 // 16
                         if width > 0 and height > 0:
-                            position(
+                            if game_window != hwnd:
+                                # An owned popup stays above its game window even when the
+                                # renderer raises the game during the victory transition.
+                                k.SetLastError(0)
+                                if not set_owner(window, -8, hwnd) and k.GetLastError():
+                                    raise c.WinError()
+                                game_window = hwnd
+                            if not position(
                                 window,
                                 -1,
                                 pt.x + (rect.right - width) // 2,
@@ -247,15 +263,32 @@ def play(pid, base, runtime):
                                 width,
                                 height,
                                 0x0050,
+                            ):
+                                raise c.WinError()
+                            u.UpdateWindow(window)
+                            # Keep victory footage at the original 4:3 movie's width
+                            # within the widescreen canvas. Black margins cover the
+                            # native film and victory badge underneath.
+                            film_width = (
+                                min(width, rect.bottom * 4 // 3)
+                                if clip != "rf"
+                                else width
                             )
+                            film_height = film_width * 9 // 16
+                            inset_x = (width - film_width) // 2
+                            inset_y = (height - film_height) // 2
                             dc = dc_for(window)
                             try:
+                                if (inset_x or inset_y) and not black_fill(
+                                    dc, 0, 0, width, height, 0x00000042
+                                ):
+                                    raise c.WinError()
                                 lines = draw(
                                     dc,
-                                    0,
-                                    0,
-                                    width,
-                                    height,
+                                    inset_x,
+                                    inset_y,
+                                    film_width,
+                                    film_height,
                                     0,
                                     0,
                                     1920,
@@ -278,9 +311,9 @@ def play(pid, base, runtime):
                                 log(
                                     f"show {clip}.mp4 frame {index} "
                                     f"source {frame.shape[1]}x{frame.shape[0]} "
-                                    f"display {width}x{height} at "
-                                    f"{pt.x + (rect.right - width) // 2},"
-                                    f"{pt.y + (rect.bottom - height) // 2}"
+                                    f"display {film_width}x{film_height} at "
+                                    f"{pt.x + (rect.right - width) // 2 + inset_x},"
+                                    f"{pt.y + (rect.bottom - height) // 2 + inset_y}"
                                 )
             elif visible:
                 hidden(window, 0)
