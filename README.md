@@ -68,12 +68,14 @@ The game controls skipping and audio. The HD picture follows the original film f
 
     Play.cmd -WidescreenTrial
 
-This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. In a Windows 11 VirtualBox guest at 1920×1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. The layout has been checked at The Cakewalk depot in the Windows 11 guest. Split-screen and a full widescreen mission remain untested.
+This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. In a Windows 11 VirtualBox guest at 1920×1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. In a full Cakewalk mission in the Windows 11 guest, the HUD stayed centred through the switch to the jeep and the flag return. Split-screen remains untested.
+
+The victory film started automatically on that run and appeared left of centre. The HD player log recorded Windows error 1455 before the first HD frame, so this run exercised native film playback. The player heard neither effects nor music and found the default Smooth filter blurry. To compare crisp pixel edges on the next run, use `Play.cmd -WidescreenTrial -HDCinematics -Filter Sharp`.
 
 ## Where the remaster goes next
 
-- **More battlefield at 16:9.** Check the centred HUD through a complete mission, additional vehicles and split-screen.
-- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Verify the automatic transition from a mission win into the player-built HD completion film.
+- **More battlefield at 16:9.** Check the HUD with the remaining vehicles and in split-screen.
+- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Retest the player-built HD victory film in the guest with the revised movie detector. Check the logged MP4 name, source dimensions, display position and presented frames.
 - **Graphics and platform testing.** Compare xBR with the default renderer in motion, then test installation, sound and input under Wine on Linux.
 
 ## Credits and licensing

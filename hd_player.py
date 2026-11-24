@@ -65,6 +65,43 @@ def log(msg):
     print(msg, flush=True)
 
 
+# Query only the five local movie files. Enumerating every handle in the
+# game repeatedly can exhaust the Windows guest's thread/commit budget.
+open_attributes = api(
+    k, "CreateFileW", ptr, w.LPCWSTR, w.DWORD, w.DWORD, ptr, w.DWORD, w.DWORD, ptr
+)
+query_file = api(
+    c.windll.ntdll, "NtQueryInformationFile", w.LONG, ptr, ptr, ptr, w.ULONG, w.ULONG
+)
+close_handle = api(k, "CloseHandle", w.BOOL, ptr)
+
+
+def game_has_movie(path, pid):
+    handle = open_attributes(str(path), 0x80, 7, None, 3, 0, None)
+    if handle == c.c_void_p(-1).value:
+        raise c.WinError()
+    try:
+        # FileProcessIdsUsingFileInformation returns a ULONG count followed
+        # by pointer-aligned process IDs. The status block reports byte length.
+        io_status = (c.c_size_t * 2)()
+        size = 256
+        while True:
+            buf = c.create_string_buffer(size)
+            status = query_file(handle, io_status, buf, size, 47) & 0xFFFFFFFF
+            if status in (0xC0000004, 0x80000005) and size < 65536:
+                size *= 2
+                continue
+            if status:
+                raise OSError(f"Movie handle query failed (NTSTATUS 0x{status:08X})")
+            count = w.ULONG.from_buffer(buf).value
+            offset = c.sizeof(ptr)
+            if count and (count + 1) * offset > min(size, io_status[1]):
+                raise ValueError("Incomplete movie process list")
+            return pid in (c.c_size_t * count).from_buffer(buf, offset)
+    finally:
+        close_handle(handle)
+
+
 def play(pid, base, runtime):
     process = psutil.Process(pid)
     identity = hashlib.sha256(Path(process.exe()).read_bytes()).hexdigest()
@@ -96,7 +133,7 @@ def play(pid, base, runtime):
     u.SetLayeredWindowAttributes(window, 0, 255, 2)
     movies = runtime.parent / "HD-Cinematics"
     clips = {
-        name
+        name: runtime / "Title" / (name + ".stm")
         for name in ("rf", "win", "win1", "win2", "win3")
         if (movies / (name + ".mp4")).is_file()
     }
@@ -107,6 +144,7 @@ def play(pid, base, runtime):
     cap = None
     clip = None
     last = -1
+    probe_failed = False
     next_probe = 0
     visible = False
     first = None
@@ -118,15 +156,24 @@ def play(pid, base, runtime):
             pump()
             now = time.monotonic()
             if now >= next_probe:
-                identifier = None
-                for f in process.open_files():
-                    path = Path(f.path)
-                    if path.suffix.lower() == ".stm":
-                        identifier = (
-                            path.stem.lower() if path.stem.lower() in clips else None
-                        )
-                        if identifier:
-                            break
+                try:
+                    identifier = next(
+                        (
+                            name
+                            for name, path in clips.items()
+                            if game_has_movie(path, pid)
+                        ),
+                        None,
+                    )
+                except OSError as exc:
+                    if not probe_failed:
+                        log(f"Movie detection temporarily unavailable: {exc}")
+                    probe_failed = True
+                    next_probe = now + 1
+                    hidden(window, 0)
+                    visible = False
+                    continue
+                probe_failed = False
                 next_probe = now + 0.10
                 if identifier != clip:
                     if visible:
@@ -151,6 +198,9 @@ def play(pid, base, runtime):
                         )
                         if not cap.isOpened():
                             raise RuntimeError(clip)
+            if probe_failed:
+                time.sleep(0.05)
+                continue
             # The game replaces its startup window. Find the currently focused
             # game window each time so a stale handle cannot suppress playback.
             hwnd = foreground()
@@ -225,7 +275,13 @@ def play(pid, base, runtime):
                             presented += 1
                             if first is None:
                                 first = index
-                                log(f"show {clip} frame {index} size {width}x{height}")
+                                log(
+                                    f"show {clip}.mp4 frame {index} "
+                                    f"source {frame.shape[1]}x{frame.shape[0]} "
+                                    f"display {width}x{height} at "
+                                    f"{pt.x + (rect.right - width) // 2},"
+                                    f"{pt.y + (rect.bottom - height) // 2}"
+                                )
             elif visible:
                 hidden(window, 0)
                 visible = False
