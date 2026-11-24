@@ -4,12 +4,16 @@ import ctypes as c
 import hashlib
 import struct
 import sys
+import tempfile
 import time
+from contextlib import ExitStack
 from ctypes import wintypes as w
 from pathlib import Path
 
 import cv2
+import numpy as np
 import psutil
+from build_cinematics import video_stream
 
 u, k, g = c.windll.user32, c.windll.kernel32, c.windll.gdi32
 u.SetProcessDPIAware()
@@ -39,15 +43,70 @@ create = api(
     ptr,
     ptr,
 )
-dc_for = api(u, "GetDC", ptr, ptr)
-draw = api(
-    g, "StretchDIBits", c.c_int, ptr, *([c.c_int] * 8), ptr, ptr, w.UINT, w.DWORD
+memory_dc = api(g, "CreateCompatibleDC", ptr, ptr)
+dib = api(g, "CreateDIBSection", ptr, ptr, ptr, w.UINT, c.POINTER(ptr), ptr, w.DWORD)
+select = api(g, "SelectObject", ptr, ptr, ptr)
+delete_bitmap = api(g, "DeleteObject", w.BOOL, ptr)
+delete_dc = api(g, "DeleteDC", w.BOOL, ptr)
+update = api(
+    u,
+    "UpdateLayeredWindow",
+    w.BOOL,
+    ptr,
+    ptr,
+    ptr,
+    ptr,
+    ptr,
+    ptr,
+    w.DWORD,
+    ptr,
+    w.DWORD,
 )
-black_fill = api(g, "PatBlt", w.BOOL, ptr, c.c_int, c.c_int, c.c_int, c.c_int, w.DWORD)
-release = api(u, "ReleaseDC", c.c_int, ptr, ptr)
 position = api(
     u, "SetWindowPos", w.BOOL, ptr, ptr, c.c_int, c.c_int, c.c_int, c.c_int, w.UINT
 )
+
+
+class Surface:
+    """Complete each frame off screen before handing its bitmap to Windows."""
+
+    def __init__(self, width, height):
+        self.size = w.SIZE(width, height)
+        header = struct.pack(
+            "<IiiHHIIiiII", 40, width, -height, 1, 32, 0, 0, 0, 0, 0, 0
+        )
+        self.dc = memory_dc(None)
+        address = ptr()
+        self.bitmap = dib(self.dc, header, 0, c.byref(address), None, 0)
+        if not self.bitmap:
+            delete_dc(self.dc)
+            raise c.WinError()
+        self.old = select(self.dc, self.bitmap)
+        self.pixels = np.ctypeslib.as_array(
+            (c.c_uint8 * (width * height * 4)).from_address(address.value)
+        ).reshape(height, width, 4)
+
+    def close(self):
+        select(self.dc, self.old)
+        delete_bitmap(self.bitmap)
+        delete_dc(self.dc)
+
+    def present(self, window, origin):
+        zero = w.POINT()
+        if not update(
+            window,
+            None,
+            c.byref(origin),
+            c.byref(self.size),
+            self.dc,
+            c.byref(zero),
+            0,
+            None,
+            4,
+        ):
+            raise c.WinError()
+
+
 set_owner = api(
     u,
     "SetWindowLongPtrW" if c.sizeof(ptr) == 8 else "SetWindowLongW",
@@ -111,7 +170,7 @@ def game_has_movie(path, pid):
         close_handle(handle)
 
 
-def play(pid, base, runtime):
+def play(pid, base, runtime, resources):
     process = psutil.Process(pid)
     identity = hashlib.sha256(Path(process.exe()).read_bytes()).hexdigest()
     if identity not in {
@@ -124,7 +183,7 @@ def play(pid, base, runtime):
         raise c.WinError()
     # The standard STATIC class supplies a non-interactive display surface.
     window = create(
-        0x08000080,  # WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW
+        0x080800A0,  # Non-activating, click-through, layered tool window
         "STATIC",
         "Return Fire HD Cinematics",
         0x80000000,
@@ -146,9 +205,28 @@ def play(pid, base, runtime):
         for name in ("rf", "win", "win1", "win2", "win3")
         if (movies / (name + ".mp4")).is_file()
     }
-    header = struct.pack(
-        "<IiiHHIIiiII", 40, 1920, -1080, 1, 24, 0, 1920 * 1080 * 3, 0, 0, 0, 0
+    sources = {name: movies / (name + ".mp4") for name in clips}
+    scratch = Path(resources.enter_context(tempfile.TemporaryDirectory()))
+    for name, digest in {
+        "prolific": "f64e28c87af5c3cd7a846350b3783cf95fdcbeeaed79c4bb4e1406b926707140",
+        "twi": "f3ba15654eba1d605b342abb2d53944b77ac31a9871c004021bc05a394b7ee1d",
+    }.items():
+        stm = runtime / "Title" / (name + ".stm")
+        if stm.is_file():
+            data = stm.read_bytes()
+            if hashlib.sha256(data).hexdigest() == digest:
+                avi = scratch / (name + ".avi")
+                avi.write_bytes(
+                    video_stream(data, struct.unpack_from("<I", data, 216)[0], b"")
+                )
+                sources[name] = avi
+                clips[name] = stm
+    banner = cv2.imdecode(
+        np.fromfile(runtime / "Title" / "BanBH.BMP", dtype=np.uint8), cv2.IMREAD_COLOR
     )
+    if banner is None:
+        raise ValueError("Could not read the original victory banner")
+    surface = None
     counter = c.c_uint32()
     cap = None
     clip = None
@@ -202,9 +280,7 @@ def play(pid, base, runtime):
                     presented = 0
                     finished = False
                     if clip:
-                        cap = cv2.VideoCapture(
-                            str(movies / (clip + ".mp4")), cv2.CAP_FFMPEG
-                        )
+                        cap = cv2.VideoCapture(str(sources[clip]), cv2.CAP_FFMPEG)
                         if not cap.isOpened():
                             raise RuntimeError(clip)
             if probe_failed:
@@ -255,53 +331,59 @@ def play(pid, base, runtime):
                                 if not set_owner(window, -8, hwnd) and k.GetLastError():
                                     raise c.WinError()
                                 game_window = hwnd
-                            if not position(
-                                window,
-                                -1,
-                                pt.x + (rect.right - width) // 2,
-                                pt.y + (rect.bottom - height) // 2,
-                                width,
-                                height,
-                                0x0050,
-                            ):
-                                raise c.WinError()
-                            u.UpdateWindow(window)
-                            # Keep victory footage at the original 4:3 movie's width
-                            # within the widescreen canvas. Black margins cover the
-                            # native film and victory badge underneath.
+                            victory = clip.startswith("win")
                             film_width = (
-                                min(width, rect.bottom * 4 // 3)
-                                if clip != "rf"
-                                else width
+                                width
+                                if clip == "rf"
+                                else min(width, height * 4 // 3)
                             )
-                            film_height = film_width * 9 // 16
+                            film_height = film_width * frame.shape[0] // frame.shape[1]
                             inset_x = (width - film_width) // 2
                             inset_y = (height - film_height) // 2
-                            dc = dc_for(window)
-                            try:
-                                if (inset_x or inset_y) and not black_fill(
-                                    dc, 0, 0, width, height, 0x00000042
-                                ):
-                                    raise c.WinError()
-                                lines = draw(
-                                    dc,
-                                    inset_x,
-                                    inset_y,
-                                    film_width,
-                                    film_height,
-                                    0,
-                                    0,
-                                    1920,
-                                    1080,
-                                    frame.ctypes.data,
-                                    header,
-                                    0,
-                                    0xCC0020,
+                            if surface is None or (
+                                surface.size.cx,
+                                surface.size.cy,
+                            ) != (width, height):
+                                if surface:
+                                    surface.close()
+                                surface = Surface(width, height)
+                            surface.pixels.fill(0)
+                            film = cv2.resize(
+                                frame,
+                                (film_width, film_height),
+                                interpolation=cv2.INTER_AREA
+                                if film_width < frame.shape[1]
+                                else cv2.INTER_LINEAR,
+                            )
+                            surface.pixels[
+                                inset_y : inset_y + film_height,
+                                inset_x : inset_x + film_width,
+                                :3,
+                            ] = film
+                            if victory:
+                                # Original single-player brown banner, 360x104 on the 480-line surface.
+                                bw = round(360 * height / 480)
+                                bh = round(104 * height / 480)
+                                bx = (width - bw) // 2
+                                by = round(363 * height / 480)
+                                badge = cv2.resize(
+                                    banner, (bw, bh), interpolation=cv2.INTER_NEAREST
                                 )
-                                if lines <= 0:
-                                    raise RuntimeError("Could not present HD frame")
-                            finally:
-                                release(window, dc)
+                                target = surface.pixels[by : by + bh, bx : bx + bw, :3]
+                                np.copyto(
+                                    target,
+                                    badge,
+                                    where=np.any(badge, axis=2)[:, :, None],
+                                )
+                            origin = w.POINT(
+                                pt.x + (rect.right - width) // 2,
+                                pt.y + (rect.bottom - height) // 2,
+                            )
+                            surface.present(window, origin)
+                            if not visible and not position(
+                                window, -1, 0, 0, 0, 0, 0x0053
+                            ):
+                                raise c.WinError()
                             visible = True
                             last = index
                             highest = max(highest, index)
@@ -309,7 +391,7 @@ def play(pid, base, runtime):
                             if first is None:
                                 first = index
                                 log(
-                                    f"show {clip}.mp4 frame {index} "
+                                    f"show {sources[clip].name} frame {index} "
                                     f"source {frame.shape[1]}x{frame.shape[0]} "
                                     f"display {film_width}x{film_height} at "
                                     f"{pt.x + (rect.right - width) // 2 + inset_x},"
@@ -324,9 +406,12 @@ def play(pid, base, runtime):
     finally:
         if cap:
             cap.release()
+        if surface:
+            surface.close()
         u.DestroyWindow(window)
         k.CloseHandle(handle)
 
 
 if __name__ == "__main__":
-    play(*map(int, sys.argv[1:3]), Path(sys.argv[3]))
+    with ExitStack() as resources:
+        play(*map(int, sys.argv[1:3]), Path(sys.argv[3]), resources)

@@ -62,7 +62,7 @@ For in-game HD playback, install the optional display dependencies in the same P
     python -m pip install opencv-python psutil
     Play.cmd -HDCinematics
 
-The game controls skipping and audio. The HD picture follows the original film frame while the game has focus. The two studio idents use the native player.
+The game controls skipping and audio. The HD picture follows the original film frame while the game has focus. The HD player reads the two animated studio idents from the installed ISO files and centres their full 4:3 frames. Existing five-film builds work without another conversion.
 
 ### Try the wider battlefield
 
@@ -72,7 +72,7 @@ This experimental option targets the fingerprinted English ISO executable. It bu
 
 In an earlier VirtualBox run the game displayed the original victory film at the left of the widescreen picture even though the HD player logged frame presentations. The updated player uses a window owned by the game and centres the widescreen victory picture at the original film's display width. The opening uses the full widescreen canvas.
 
-On the physical Windows 11 PC, The Cakewalk ran at 1920×1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0–176, and frames captured from the visible game matched the player-built HD film. Its 1440×810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
+On the physical Windows 11 PC, The Cakewalk ran at 1920×1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0–176, and frames captured from the visible game matched the player-built HD film. Its 1440×810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The player now draws each complete frame off screen, including the original brown single-player victory banner from the installed game, before presenting it to Windows. A native Cakewalk capture showed the emblem over the movie and the sampled film rows matched the HD source. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
 
 ## Where the remaster goes next
 
