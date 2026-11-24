@@ -124,8 +124,24 @@ try {
                 }
                 [BitConverter]::GetBytes([uint16]396).CopyTo($original, 0xf643)
                 $original[0x3037f] = 214
+                # Blit the native HUD at (surfaceWidth - bitmapWidth) / 2.
+                # Keep the original bottom anchor, source rectangle and BltFast flags.
+                [byte[]]$hudBlit = @(
+                    0x6a,0x10                       # Existing BltFast flags
+                    0x8b,0x15,0xd4,0xaa,0x45,0x00  # EDX = current HUD bitmap descriptor
+                    0x52,0xff,0x72,0x10            # Source rectangle and DirectDraw surface
+                    0xa1,0x0c,0xc0,0x44,0x00       # Destination Y = screen height - bitmap height
+                    0x2b,0x42,0x0c,0x50
+                    0xa1,0x08,0xc0,0x44,0x00       # Destination X = (screen width - bitmap width) / 2
+                    0x2b,0x42,0x08,0xd1,0xe8,0x50
+                    0xa1,0xe4,0xbf,0x44,0x00       # Blit to the game's original back buffer
+                    0x50,0x8b,0x00,0xff,0x50,0x1c
+                )
+                $hudBlit.CopyTo($original, 0x2c0cd)
+                # Shift the single-player instrument origin by the same 54 logical pixels.
+                $original[0x156a7] = 141
                 $wideHash = [BitConverter]::ToString($sha.ComputeHash($original)).Replace('-','')
-                if ($wideHash -ne 'DE123BDB21262A2C0FF4F33C7FBC8D11FFDE5C813BACE83CFEDF1E63F056F0B0') {
+                if ($wideHash -ne '25A90FEC1FB0ADC33CD51161C23F48E712C2D3298FCD823A6A583DA1AD6487A7') {
                     throw 'Widescreen trial verification failed.'
                 }
                 $gameName = 'ReturnFireWide.exe'

@@ -70,7 +70,7 @@ def play(pid, base, runtime):
     identity = hashlib.sha256(Path(process.exe()).read_bytes()).hexdigest()
     if identity not in {
         "90cd971aff6570ae508d3011c6a0a84b9f61b433f3fef568bbf5854f14de9dd8",
-        "de123bdb21262a2c0ff4f33c7fbc8d11ffde5c813bace83cfedf1e63f056f0b0",
+        "25a90fec1fb0adc33cd51161c23f48e712c2d3298fcd823a6a583da1ad6487a7",
     }:
         raise ValueError("Unsupported cinematic build")
     handle = open_read(0x10, False, pid)
