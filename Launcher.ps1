@@ -5,6 +5,9 @@ param(
     [string]$Source,
     [string]$WrapperZip,
     [switch]$MovieFix,
+    [switch]$BuildCinematics,
+    [switch]$HDCinematics,
+    [switch]$WidescreenTrial,
     [switch]$SetupOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -17,6 +20,25 @@ $release = 'https://github.com/FunkyFr3sh/cnc-ddraw/releases/download/v7.1.0.0/c
 $mutex = New-Object System.Threading.Mutex($false,'Local\ReturnFireHDLauncher')
 try {
     if (!$mutex.WaitOne(0)) { throw 'Another launcher is already running.' }
+    if ($BuildCinematics) {
+        if (!$Source -and !(Test-Path "$runtime/Title/rf.stm")) {
+            $picker = New-Object System.Windows.Forms.FolderBrowserDialog
+            $picker.Description = 'Choose the mounted or extracted English Return Fire ISO folder'
+            if ($picker.ShowDialog() -ne 'OK') { return }
+            $Source = $picker.SelectedPath
+        }
+        $mediaSource = if ($Source) { $Source } else { $runtime }
+        & python (Join-Path $PSScriptRoot 'build_cinematics.py') $mediaSource (Join-Path $PSScriptRoot 'HD-Cinematics')
+        if ($LASTEXITCODE) { throw 'Cinematic conversion failed.' }
+        return
+    }
+    if ($HDCinematics) {
+        foreach ($film in 'rf','win','win1','win2','win3') {
+            if (!(Test-Path "$PSScriptRoot/HD-Cinematics/$film.mp4")) { throw 'Run Play.cmd -BuildCinematics first.' }
+        }
+        & python -c 'import cv2, psutil'
+        if ($LASTEXITCODE) { throw 'HD playback requires opencv-python and psutil in your Python environment.' }
+    }
     if (!(Test-Path -LiteralPath $runtime)) {
         if (!$Source) {
             $picker = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -72,9 +94,9 @@ try {
         }
     }
     if ($SetupOnly) { return }
-    if (Get-Process -Name ReturnFireGame,ReturnFireMovieFix -ErrorAction SilentlyContinue) { throw 'Close the running Return Fire game before launching this edition.' }
+    if (Get-Process -Name ReturnFireGame,ReturnFireMovieFix,ReturnFireWide -ErrorAction SilentlyContinue) { throw 'Close the running Return Fire game before launching this edition.' }
     $gameName = 'ReturnFireGame.exe'
-    if ($MovieFix) {
+    if ($MovieFix -or $WidescreenTrial -or $HDCinematics) {
         $original = [IO.File]::ReadAllBytes((Join-Path $runtime $gameName))
         $sha = [Security.Cryptography.SHA256]::Create()
         try {
@@ -92,6 +114,22 @@ try {
                 throw 'Movie fix verification failed.'
             }
             $gameName = 'ReturnFireMovieFix.exe'
+            if ($WidescreenTrial) {
+                # The trial expands the presentation surface and the logical battlefield together.
+                foreach ($offset in 0x1957,0x2e728,0x2f5ea,0x2fdd9,0x31344,0x3145f,0x314a9) {
+                    [BitConverter]::GetBytes([uint16]856).CopyTo($original, $offset)
+                }
+                foreach ($offset in 0xf5f2,0xf623,0x30314,0x304ba) {
+                    [BitConverter]::GetBytes([uint16]428).CopyTo($original, $offset)
+                }
+                [BitConverter]::GetBytes([uint16]396).CopyTo($original, 0xf643)
+                $original[0x3037f] = 214
+                $wideHash = [BitConverter]::ToString($sha.ComputeHash($original)).Replace('-','')
+                if ($wideHash -ne '59A74E4EDC3B23C7589836241E259CE911F222996B18C7975ECA2C1ACBFC6990') {
+                    throw 'Widescreen trial verification failed.'
+                }
+                $gameName = 'ReturnFireWide.exe'
+            }
             [IO.File]::WriteAllBytes((Join-Path $runtime $gameName), $original)
         } finally { $sha.Dispose() }
     }
@@ -99,7 +137,7 @@ try {
     $target = @{ '1080p' = 1080; '720p' = 720; 'Original' = 480 }[$ProfileName]
     $height = [int][Math]::Min($target, $desktop.Height)
     $width = [int][Math]::Min([Math]::Floor($height * 16 / 9), $desktop.Width)
-    if ($ProfileName -eq 'Original') { $width = [Math]::Min(640,$desktop.Width) }
+    if ($ProfileName -eq 'Original' -and !$WidescreenTrial) { $width = [Math]::Min(640,$desktop.Width) }
     $sampling = if ($Filter -eq 'Sharp') { 0 } else { 2 }
     $graphics = @('renderer=direct3d9',"d3d9_filter=$sampling")
     if ($Filter -eq 'xBR') {
@@ -107,8 +145,10 @@ try {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $shader) -Destination $runtime -Force
         $graphics = @('renderer=opengl',"shader=$shader")
     }
-    $display = @('[ddraw]',"width=$width","height=$height",'windowed=true','fullscreen=false','border=false','maintas=true','aspect_ratio=4:3','boxing=false')
-    ($display + $graphics + @('fake_mode=640x480x8','savesettings=0','resizable=false','adjmouse=true','posX=-32000','posY=-32000')) | Set-Content -LiteralPath (Join-Path $runtime 'ddraw.ini') -Encoding ASCII
+    $aspect = if ($WidescreenTrial) { '16:9' } else { '4:3' }
+    $mode = if ($WidescreenTrial) { '856x480x8' } else { '640x480x8' }
+    $display = @('[ddraw]',"width=$width","height=$height",'windowed=true','fullscreen=false','border=false','maintas=true',"aspect_ratio=$aspect",'boxing=false')
+    ($display + $graphics + @("fake_mode=$mode",'savesettings=0','resizable=false','adjmouse=true','posX=-32000','posY=-32000')) | Set-Content -LiteralPath (Join-Path $runtime 'ddraw.ini') -Encoding ASCII
     $drive = $null
     foreach ($letter in 'S','T','U','V','W','X','Y','Z') {
         $candidate = $letter + ':'
@@ -123,7 +163,20 @@ try {
         New-ItemProperty $install -Name 'Installed Path' -Value $runtime -PropertyType String -Force | Out-Null
         New-ItemProperty $install -Name 'Installation Complete' -Value 1 -PropertyType DWord -Force | Out-Null
         New-ItemProperty $config -Name 'Full Screen' -Value 1 -PropertyType DWord -Force | Out-Null
-        $p = Start-Process ($drive + '\' + $gameName) -WorkingDirectory ($drive + '\') -Wait -PassThru
+        $p = Start-Process ($drive + '\' + $gameName) -WorkingDirectory ($drive + '\') -PassThru
+        try {
+            if ($HDCinematics) {
+                $timer = [Diagnostics.Stopwatch]::StartNew()
+                while (!$p.HasExited -and !$p.MainWindowHandle -and $timer.Elapsed.TotalSeconds -lt 30) {
+                    Start-Sleep -Milliseconds 100
+                    $p.Refresh()
+                }
+                if ($p.MainWindowHandle) {
+                    & python (Join-Path $PSScriptRoot 'hd_player.py') $p.Id $p.MainModule.BaseAddress.ToInt64() $runtime
+                    if ($LASTEXITCODE) { Write-Warning 'HD playback ended. Native playback is available.' }
+                }
+            }
+        } finally { $p.WaitForExit() }
         if ($p.ExitCode -ne 0) { throw "Return Fire exited with code $($p.ExitCode)." }
     } finally { & subst.exe $drive /d | Out-Null }
 } finally { $mutex.Dispose() }

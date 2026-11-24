@@ -9,3 +9,6 @@ PrivateGame/
 *.wav
 *.avi
 *.mp4
+
+/HD-Cinematics/
+__pycache__/

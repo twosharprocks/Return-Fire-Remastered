@@ -45,6 +45,31 @@ On Windows 11, a player completed one mission in each English edition using fres
 
 Close the game before moving your personal installation. Move the whole extracted folder together. The launcher refreshes the game path at startup and uses a temporary drive mapping while playing. Controls and progress live in the Windows user registry and are shared by installations under that account. To share the kit, send a clean repository ZIP. Your installed folder contains your personal copy of the game.
 
+## v0.2.0 development options
+
+### Build the 16:9 films
+
+Install Python 3 and FFmpeg with the libx264 encoder, and make both commands available on PATH. Mount or extract your English Windows ISO. In a command prompt inside the kit, run:
+
+    Play.cmd -BuildCinematics -Source "D:\"
+
+Replace D:\ with the mounted disc or extracted folder. You can omit the source to use your installed films or open the folder picker. The converter checks the five original STM fingerprints and writes rf.mp4 (opening) and win.mp4, win1.mp4, win2.mp4 and win3.mp4 (completion films) to **HD-Cinematics** beside Play.cmd. Each file plays in a regular MP4 player. To rebuild, rename the existing output folder first.
+
+The conversion keeps the source frame rate of 15 fps and stereo audio. It crops the 320×240 picture to 320×180 before scaling to 1920×1080. The opening uses the corrected fire palette and a centred crop. The victory films use the lower framing selected for the parade. Keep these player-generated movies in your personal installation.
+
+For in-game HD playback, install the optional display dependencies in the same Python environment and launch the ISO edition:
+
+    python -m pip install opencv-python psutil
+    Play.cmd -HDCinematics
+
+The game controls skipping and audio. The HD picture follows the original film frame while the game has focus. The two studio idents use the native player.
+
+### Try the wider battlefield
+
+    Play.cmd -WidescreenTrial
+
+This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. Same-map edge coverage, HUD placement and vehicle proportions need visual verification before release.
+
 ## Where the remaster goes next
 
 - **More battlefield at 16:9.** Compare the same map and camera position in the original and experimental wider viewport. Check extra terrain at both edges, vehicle shape and HUD alignment. Runtime validation awaits a Windows test VM.
