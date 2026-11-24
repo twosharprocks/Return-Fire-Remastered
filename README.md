@@ -68,12 +68,12 @@ The game controls skipping and audio. The HD picture follows the original film f
 
     Play.cmd -WidescreenTrial
 
-This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. Same-map edge coverage, HUD placement and vehicle proportions need visual verification before release.
+This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856×480 display surface and expands the logical battlefield from 320×152 to 428×152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. In a Windows 11 VirtualBox guest at 1920×1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The HUD retains its original width and is left-aligned, leaving a black area at the bottom right. Split-screen and a full widescreen mission remain untested.
 
 ## Where the remaster goes next
 
-- **More battlefield at 16:9.** Compare the same map and camera position in the original and experimental wider viewport. Check extra terrain at both edges, vehicle shape and HUD alignment. Runtime validation awaits a Windows test VM.
-- **HD cinematics.** Private 1920×1080 previews cover the opening and four completion films, including a correction for colour fringing around the opening title. Package a repeatable conversion from player-owned media and verify the transition from a mission win into HD playback.
+- **More battlefield at 16:9.** Centre the original HUD within the wider frame and test a complete mission, additional vehicles and split-screen.
+- **HD cinematics.** The builder reproduces all five approved 1920×1080 previews from player-owned media. The HD opening has run in game. Verify the automatic transition from a mission win into the player-built HD completion film.
 - **Graphics and platform testing.** Compare xBR with the default renderer in motion, then test installation, sound and input under Wine on Linux.
 
 ## Credits and licensing

@@ -116,16 +116,16 @@ try {
             $gameName = 'ReturnFireMovieFix.exe'
             if ($WidescreenTrial) {
                 # The trial expands the presentation surface and the logical battlefield together.
-                foreach ($offset in 0x1957,0x2e728,0x2f5ea,0x2fdd9,0x31344,0x3145f,0x314a9) {
+                foreach ($offset in 0x49c08,0x1957,0x2e728,0x2f5ea,0x2fdd9,0x31344,0x3145f,0x314a9) {
                     [BitConverter]::GetBytes([uint16]856).CopyTo($original, $offset)
                 }
-                foreach ($offset in 0xf5f2,0xf623,0x30314,0x304ba) {
+                foreach ($offset in 0xc6b0,0x2f4df,0x312d0,0x313b2,0x313f5,0x2e7e3,0xf5f2,0xf623,0x30314,0x304ba) {
                     [BitConverter]::GetBytes([uint16]428).CopyTo($original, $offset)
                 }
                 [BitConverter]::GetBytes([uint16]396).CopyTo($original, 0xf643)
                 $original[0x3037f] = 214
                 $wideHash = [BitConverter]::ToString($sha.ComputeHash($original)).Replace('-','')
-                if ($wideHash -ne '59A74E4EDC3B23C7589836241E259CE911F222996B18C7975ECA2C1ACBFC6990') {
+                if ($wideHash -ne 'DE123BDB21262A2C0FF4F33C7FBC8D11FFDE5C813BACE83CFEDF1E63F056F0B0') {
                     throw 'Widescreen trial verification failed.'
                 }
                 $gameName = 'ReturnFireWide.exe'
