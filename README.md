@@ -8,7 +8,7 @@ Play your original Windows edition of *Return Fire* on Windows 11 with its 256-c
 
 1. Download the repository ZIP from GitHub (**Code â†’ Download ZIP**) and extract it into a writable folder.
 2. Prepare one of the English Windows PC editions below.
-3. Double-click **Play.cmd** and select the folder containing **RFIRE.BIN**. The first setup imports your files into **PrivateGame** and downloads a checksum-verified copy of cnc-ddraw. Later launches work offline.
+3. Double-click **Play.cmd** and select the folder containing **RFIRE.BIN**. The first setup imports your files into **PrivateGame** and downloads a checksum-verified copy of cnc-ddraw. Later launches work offline. Choose a display mode and select **Play**. The original 4:3 window is preselected. If the ISO HD films are installed, the picker also offers HD playback (Python dependencies below).
 
 | Your edition | Folder to select | Music |
 | --- | --- | --- |
@@ -19,7 +19,12 @@ Use a separate kit folder for each edition. Once installed, the launcher reuses 
 
 ## Picture, sound and films
 
-The default 1080p profile centres the original 4:3 frame on a borderless display. At 1920Ã—1080 the battlefield occupies 1440Ã—1080, preserving vehicle and HUD proportions. The original game still draws at 640Ã—480. Live Windows 11 checks confirmed the repaired palette.
+**Original 4:3 – windowed** opens a framed, movable window that fits the available desktop. It retains the original 640×480 game surface and works with both editions. **Experimental 16:9 – borderless fullscreen** fills the primary monitor and expands the battlefield. It requires the verified English ISO executable. The game's menu remains accessible in both modes.
+
+Choose the mode each time you start the game, or use a direct launch command:
+
+    Play.cmd -DisplayMode Windowed4x3
+    Play.cmd -DisplayMode Fullscreen16x9 -HDCinematics
 
 Run these examples in a command prompt inside the kit folder.
 
@@ -28,8 +33,8 @@ Run these examples in a command prompt inside the kit folder.
 | `Play.cmd -MovieFix` | Repairs the horizontal band across ISO films. Both the opening and mission-completion film passed live playback checks. The launcher checks the executable fingerprint and creates a separate local copy. Launch normally to restore standard playback. |
 | `Play.cmd -Filter Sharp` | Uses nearest-neighbour scaling for crisp pixel edges. |
 | `Play.cmd -Filter xBR` | Uses an optional OpenGL pixel-art shader. Tested on The Cakewalk in the Windows 11 VM. |
-| `Play.cmd -ProfileName 720p` | Selects the smaller HD profile. |
-| `Play.cmd -ProfileName Original` | Selects the original-size profile. |
+| `Play.cmd -ProfileName 720p` | Caps the original window at 720 pixels high. |
+| `Play.cmd -ProfileName Original` | Caps the original window at 640×480. |
 | `Play.cmd -WrapperZip "C:\Downloads\cnc-ddraw.zip"` | Uses a local copy of the pinned wrapper for an offline first setup. |
 
 Sharp is the default and preserves the original pixel edges. The optional Smooth setting requests Direct3D bicubic filtering. Its visible effect on the game's 8-bit frames depends on wrapper support. For offline installation, obtain the unmodified archive from the [cnc-ddraw 7.1.0.0 release](https://github.com/FunkyFr3sh/cnc-ddraw/releases/tag/v7.1.0.0).
@@ -68,11 +73,11 @@ The game controls skipping and audio. The HD picture follows the original film f
 
     Play.cmd -WidescreenTrial
 
-This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856Ã—480 display surface and expands the logical battlefield from 320Ã—152 to 428Ã—152. A normal launch selects the standard 4:3 game. Test the trial in a separate installation. In a Windows 11 VirtualBox guest at 1920Ã—1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. In a full Cakewalk mission in the Windows 11 guest, the HUD stayed centred through the switch to the jeep and the flag return. Split-screen remains untested.
+This experimental option targets the fingerprinted English ISO executable. It builds a separate local executable with the native cinematic fix, requests an 856Ã—480 display surface and expands the logical battlefield from 320Ã—152 to 428Ã—152. The launcher keeps a separate local widescreen executable so you can switch modes on the next launch. The existing -WidescreenTrial switch also selects borderless fullscreen. In a Windows 11 VirtualBox guest at 1920Ã—1080, the tank deployed on The Cakewalk in both modes. The wider view revealed additional terrain on both sides. The depot hazard stripes measured 147 screen pixels across in 4:3 and 146 in the trial. Driving and firing worked. The single-player HUD keeps its original width. The panel and instruments are centred beneath the battlefield, with equal margins on each side. In a full Cakewalk mission in the Windows 11 guest, the HUD stayed centred through the switch to the jeep and the flag return. Split-screen remains untested.
 
 In an earlier VirtualBox run the game displayed the original victory film at the left of the widescreen picture even though the HD player logged frame presentations. The updated player uses a window owned by the game and centres the widescreen victory picture at the original film's display width. The opening uses the full widescreen canvas.
 
-On the physical Windows 11 PC, The Cakewalk ran at 1920×1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0–176, and frames captured from the visible game matched the player-built HD film. Its 1440×810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The player now draws each complete frame off screen, including the original brown single-player victory banner from the installed game, before presenting it to Windows. A native Cakewalk capture showed the emblem over the movie and the sampled film rows matched the HD source. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
+On the physical Windows 11 PC, The Cakewalk ran at 1920×1080 with Sharp. Returning the flag triggered win1.mp4. The player presented frames 0–176, and frames captured from the visible game matched the player-built HD film. Its 1440×810 picture had 240-pixel side margins and 135-pixel top and bottom margins. The player now draws each complete frame off screen, including the original brown single-player victory banner from the installed game, before presenting it to Windows. A native Cakewalk capture showed the emblem over the movie and the sampled film rows matched the HD source. The player confirmed the game and films appeared correctly without black lines or flicker. The game sent audio to the host headphones. The other three victory films and split-screen still need native playtests.
 
 ## Where the remaster goes next
 

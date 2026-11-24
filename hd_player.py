@@ -321,8 +321,7 @@ def play(pid, base, runtime, resources):
                         u.GetClientRect(hwnd, c.byref(rect))
                         pt = w.POINT()
                         u.ClientToScreen(hwnd, c.byref(pt))
-                        width = min(rect.right, rect.bottom * 16 // 9)
-                        height = width * 9 // 16
+                        width, height = rect.right, rect.bottom
                         if width > 0 and height > 0:
                             if game_window != hwnd:
                                 # An owned popup stays above its game window even when the
@@ -333,7 +332,7 @@ def play(pid, base, runtime, resources):
                                 game_window = hwnd
                             victory = clip.startswith("win")
                             film_width = (
-                                width
+                                min(width, height * 16 // 9)
                                 if clip == "rf"
                                 else min(width, height * 4 // 3)
                             )

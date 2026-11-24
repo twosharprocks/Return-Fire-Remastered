@@ -2,6 +2,7 @@
 param(
     [ValidateSet('1080p','720p','Original')] [string]$ProfileName = '1080p',
     [ValidateSet('Smooth','Sharp','xBR')] [string]$Filter = 'Sharp',
+    [ValidateSet('Windowed4x3','Fullscreen16x9')] [string]$DisplayMode,
     [string]$Source,
     [string]$WrapperZip,
     [switch]$MovieFix,
@@ -17,6 +18,7 @@ Add-Type 'using System.Runtime.InteropServices; public static class DisplayMode 
 $runtime = Join-Path $PSScriptRoot 'PrivateGame'
 $cacheHash = '0B13AB89A64C9918189B1DADD449EF6ED3CB3B7B19CABD96D8ADBD95505BB908'
 $release = 'https://github.com/FunkyFr3sh/cnc-ddraw/releases/download/v7.1.0.0/cnc-ddraw.zip'
+$englishIsoHash = 'DC79163FC1C935CF3D4D8F7E68964F46990E439B41414960F2DA6C77EB1684E2'
 $mutex = New-Object System.Threading.Mutex($false,'Local\ReturnFireHDLauncher')
 try {
     if (!$mutex.WaitOne(0)) { throw 'Another launcher is already running.' }
@@ -31,13 +33,6 @@ try {
         & python (Join-Path $PSScriptRoot 'build_cinematics.py') $mediaSource (Join-Path $PSScriptRoot 'HD-Cinematics')
         if ($LASTEXITCODE) { throw 'Cinematic conversion failed.' }
         return
-    }
-    if ($HDCinematics) {
-        foreach ($film in 'rf','win','win1','win2','win3') {
-            if (!(Test-Path "$PSScriptRoot/HD-Cinematics/$film.mp4")) { throw 'Run Play.cmd -BuildCinematics first.' }
-        }
-        & python -c 'import cv2, psutil'
-        if ($LASTEXITCODE) { throw 'HD playback requires opencv-python and psutil in your Python environment.' }
     }
     if (!(Test-Path -LiteralPath $runtime)) {
         if (!$Source) {
@@ -95,14 +90,67 @@ try {
     }
     if ($SetupOnly) { return }
     if (Get-Process -Name ReturnFireGame,ReturnFireMovieFix,ReturnFireWide -ErrorAction SilentlyContinue) { throw 'Close the running Return Fire game before launching this edition.' }
+    if ($WidescreenTrial -and $DisplayMode -eq 'Windowed4x3') {
+        throw 'Choose one display mode. -WidescreenTrial selects Fullscreen16x9.'
+    }
+    if ($WidescreenTrial) { $DisplayMode = 'Fullscreen16x9' }
+    if (!$DisplayMode) {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try {
+            $bytes = [IO.File]::ReadAllBytes((Join-Path $runtime 'ReturnFireGame.exe'))
+            $iso = [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','') -eq $englishIsoHash
+        } finally { $sha.Dispose() }
+        $availableFilms = $iso -and !(('rf','win','win1','win2','win3') | Where-Object {
+            !(Test-Path -LiteralPath "$PSScriptRoot/HD-Cinematics/$_.mp4")
+        })
+        $form = New-Object Windows.Forms.Form
+        $form.Text = 'Return Fire Remastered'
+        $form.StartPosition = 'CenterScreen'
+        $form.FormBorderStyle = 'FixedDialog'
+        $form.MaximizeBox = $false
+        $form.MinimizeBox = $false
+        $form.ClientSize = New-Object Drawing.Size(395,172)
+        try {
+            $classic = New-Object Windows.Forms.RadioButton
+            $classic.Text = 'Original 4:3 - windowed'
+            $classic.SetBounds(18,12,350,24)
+            $classic.Checked = $true
+            $wide = New-Object Windows.Forms.RadioButton
+            $wide.Text = if ($iso) { 'Experimental 16:9 - borderless fullscreen' } else { 'Experimental 16:9 - requires the English ISO' }
+            $wide.SetBounds(18,42,367,24)
+            $wide.Enabled = $iso
+            $films = New-Object Windows.Forms.CheckBox
+            $films.Text = 'Play installed HD films'
+            $films.SetBounds(18,85,350,24)
+            $films.Checked = $HDCinematics -or $availableFilms
+            $films.Enabled = $availableFilms -and !$HDCinematics
+            $play = New-Object Windows.Forms.Button
+            $play.Text = 'Play'
+            $play.SetBounds(281,125,96,30)
+            $play.DialogResult = 'OK'
+            $form.Controls.AddRange(@($classic,$wide,$films,$play))
+            $form.AcceptButton = $play
+            if ($form.ShowDialog() -ne 'OK') { return }
+            $DisplayMode = if ($wide.Checked) { 'Fullscreen16x9' } else { 'Windowed4x3' }
+            $HDCinematics = $films.Checked
+        } finally { $form.Dispose() }
+    }
+    $WidescreenTrial = $DisplayMode -eq 'Fullscreen16x9'
+    if ($HDCinematics) {
+        foreach ($film in 'rf','win','win1','win2','win3') {
+            if (!(Test-Path "$PSScriptRoot/HD-Cinematics/$film.mp4")) { throw 'Run Play.cmd -BuildCinematics first.' }
+        }
+        & python -c 'import cv2, psutil'
+        if ($LASTEXITCODE) { throw 'HD playback requires opencv-python and psutil in your Python environment.' }
+    }
     $gameName = 'ReturnFireGame.exe'
     if ($MovieFix -or $WidescreenTrial -or $HDCinematics) {
         $original = [IO.File]::ReadAllBytes((Join-Path $runtime $gameName))
         $sha = [Security.Cryptography.SHA256]::Create()
         try {
             $sourceHash = [BitConverter]::ToString($sha.ComputeHash($original)).Replace('-','')
-            if ($sourceHash -ne 'DC79163FC1C935CF3D4D8F7E68964F46990E439B41414960F2DA6C77EB1684E2') {
-                throw 'The experimental movie fix requires the verified English ISO edition.'
+            if ($sourceHash -ne $englishIsoHash) {
+                throw 'This option requires the verified English ISO edition.'
             }
             # Use the existing native-size movie buffer and software copy path.
             # Signal frame completion after copying to the DirectDraw surface.
@@ -149,11 +197,20 @@ try {
             [IO.File]::WriteAllBytes((Join-Path $runtime $gameName), $original)
         } finally { $sha.Dispose() }
     }
-    $desktop = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-    $target = @{ '1080p' = 1080; '720p' = 720; 'Original' = 480 }[$ProfileName]
-    $height = [int][Math]::Min($target, $desktop.Height)
-    $width = [int][Math]::Min([Math]::Floor($height * 16 / 9), $desktop.Width)
-    if ($ProfileName -eq 'Original' -and !$WidescreenTrial) { $width = [Math]::Min(640,$desktop.Width) }
+    $screen = [System.Windows.Forms.Screen]::PrimaryScreen
+    if ($WidescreenTrial) {
+        $width = $screen.Bounds.Width
+        $height = $screen.Bounds.Height
+        $windowSettings = @('windowed=true','fullscreen=true','border=false')
+    } else {
+        # Leave room for the title bar, menu, taskbar and surrounding desktop.
+        $target = @{ '1080p' = 1080; '720p' = 720; 'Original' = 480 }[$ProfileName]
+        $area = $screen.WorkingArea
+        $unit = [int][Math]::Floor([Math]::Min($target / 3, [Math]::Min($area.Width / 5, $area.Height / 3.75)))
+        $width = 4 * $unit
+        $height = 3 * $unit
+        $windowSettings = @('windowed=true','fullscreen=false','border=true')
+    }
     $sampling = if ($Filter -eq 'Sharp') { 0 } else { 2 }
     $graphics = @('renderer=direct3d9',"d3d9_filter=$sampling")
     if ($Filter -eq 'xBR') {
@@ -163,7 +220,7 @@ try {
     }
     $aspect = if ($WidescreenTrial) { '16:9' } else { '4:3' }
     $mode = if ($WidescreenTrial) { '856x480x8' } else { '640x480x8' }
-    $display = @('[ddraw]',"width=$width","height=$height",'windowed=true','fullscreen=false','border=false','maintas=true',"aspect_ratio=$aspect",'boxing=false')
+    $display = @('[ddraw]',"width=$width","height=$height") + $windowSettings + @('maintas=true',"aspect_ratio=$aspect",'boxing=false')
     ($display + $graphics + @("fake_mode=$mode",'savesettings=0','resizable=false','adjmouse=true','posX=-32000','posY=-32000')) | Set-Content -LiteralPath (Join-Path $runtime 'ddraw.ini') -Encoding ASCII
     $drive = $null
     foreach ($letter in 'S','T','U','V','W','X','Y','Z') {
